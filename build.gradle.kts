@@ -42,10 +42,8 @@ sonar {
 		property("sonar.projectKey", projectKey)
 		property("sonar.organization", organization)
 		property("sonar.host.url", "https://sonarcloud.io")
-		property("sonar.coverage.jacoco.xmlReportPaths", "build/reports/jacoco/test/jacocoTestReport.xml")
 		System.getenv("SONAR_TOKEN")?.takeIf { it.isNotBlank() }?.let { token ->
 			property("sonar.token", token)
-			property("sonar.login", token)
 		}
 	}
 }
