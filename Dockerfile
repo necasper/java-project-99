@@ -24,14 +24,14 @@ COPY gradlew .
 
 RUN chmod +x gradlew
 
-RUN ./gradlew --no-daemon dependencies
+RUN #./gradlew --no-daemon dependencies
 
 #COPY lombok.config .
 COPY src src
 
 #COPY --from=frontend /frontend/dist /backend/src/main/resources/static
 
-RUN ./gradlew --no-daemon build
+RUN ./gradlew --no-daemon clean build
 
 ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=60.0 -XX:InitialRAMPercentage=50.0"
 EXPOSE 8080
