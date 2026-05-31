@@ -1,17 +1,37 @@
-FROM eclipse-temurin:21-jdk AS build
+#FROM node:26.1 AS frontend
+#
+#WORKDIR /frontend
+#
+#COPY frontend/package*.json .
+#
+#RUN npm ci
+#
+#COPY frontend /frontend
+#
+#RUN npm run build
 
-WORKDIR /app
+FROM eclipse-temurin:25-jdk
 
-COPY . .
+RUN apt-get update && apt-get install -yq make unzip
 
-RUN chmod +x gradlew && ./gradlew --no-daemon clean build
+WORKDIR /backend
 
-FROM eclipse-temurin:21-jre
+COPY gradle gradle
+COPY gradle.properties .
+COPY build.gradle.kts .
+COPY settings.gradle.kts .
+COPY gradlew .
 
-WORKDIR /app
+RUN ./gradlew --no-daemon dependencies
 
-COPY --from=build /app/build/libs/java-project-99-0.0.1-SNAPSHOT.jar app.jar
+COPY lombok.config .
+COPY src src
 
+#COPY --from=frontend /frontend/dist /backend/src/main/resources/static
+
+RUN ./gradlew --no-daemon build
+
+ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=60.0 -XX:InitialRAMPercentage=50.0"
 EXPOSE 8080
 
-CMD ["java", "-jar", "/app/app.jar"]
+CMD java -jar build/libs/java-project-99-0.0.1-SNAPSHOT.jar
