@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: app
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+
+server:
+  port: ${PORT:8080}
