@@ -3,10 +3,13 @@ spring:
     name: app
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
   jpa:
     show-sql: true
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
 
 server:
   port: ${PORT:8080}
