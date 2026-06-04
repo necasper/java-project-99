@@ -1,0 +1,160 @@
+package hexlet.code.controller;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import hexlet.code.app.AppApplication;
+import hexlet.code.dto.UserCreateDto;
+import hexlet.code.model.User;
+import hexlet.code.repository.UserRepository;
+import hexlet.code.service.PasswordEncoderService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.context.WebApplicationContext;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.hasSize;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@SpringBootTest(classes = AppApplication.class)
+class UserControllerTest {
+
+    private MockMvc mockMvc;
+
+    @Autowired
+    private WebApplicationContext webApplicationContext;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private PasswordEncoderService passwordEncoderService;
+
+    private User testUser;
+
+    @BeforeEach
+    void setUp() {
+        mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
+        userRepository.deleteAll();
+        testUser = new User();
+        testUser.setFirstName("John");
+        testUser.setLastName("Doe");
+        testUser.setEmail("john@google.com");
+        testUser.setPassword(passwordEncoderService.encode("password"));
+        testUser = userRepository.save(testUser);
+    }
+
+    @Test
+    void testGetAllUsers() throws Exception {
+        mockMvc.perform(get("/api/users"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].email").value("john@google.com"))
+                .andExpect(jsonPath("$[0].password").doesNotExist());
+    }
+
+    @Test
+    void testGetUserById() throws Exception {
+        mockMvc.perform(get("/api/users/" + testUser.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(testUser.getId()))
+                .andExpect(jsonPath("$.email").value("john@google.com"))
+                .andExpect(jsonPath("$.firstName").value("John"))
+                .andExpect(jsonPath("$.lastName").value("Doe"))
+                .andExpect(jsonPath("$.createdAt").exists())
+                .andExpect(jsonPath("$.password").doesNotExist());
+    }
+
+    @Test
+    void testGetUserNotFound() throws Exception {
+        mockMvc.perform(get("/api/users/999"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void testCreateUser() throws Exception {
+        UserCreateDto dto = new UserCreateDto();
+        dto.setEmail("jack@google.com");
+        dto.setFirstName("Jack");
+        dto.setLastName("Jons");
+        dto.setPassword("some-password");
+
+        mockMvc.perform(post("/api/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").exists())
+                .andExpect(jsonPath("$.email").value("jack@google.com"))
+                .andExpect(jsonPath("$.firstName").value("Jack"))
+                .andExpect(jsonPath("$.lastName").value("Jons"))
+                .andExpect(jsonPath("$.createdAt").exists())
+                .andExpect(jsonPath("$.password").doesNotExist());
+
+        User saved = userRepository.findByEmail("jack@google.com").orElseThrow();
+        assertThat(passwordEncoderService.matches("some-password", saved.getPassword())).isTrue();
+    }
+
+    @Test
+    void testCreateUserInvalid() throws Exception {
+        UserCreateDto dto = new UserCreateDto();
+        dto.setEmail("invalid-email");
+        dto.setPassword("ab");
+
+        mockMvc.perform(post("/api/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void testUpdateUserPartial() throws Exception {
+        Map<String, String> updates = new HashMap<>();
+        updates.put("email", "jack@yahoo.com");
+        updates.put("password", "new-password");
+
+        mockMvc.perform(put("/api/users/" + testUser.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updates)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value("jack@yahoo.com"))
+                .andExpect(jsonPath("$.firstName").value("John"))
+                .andExpect(jsonPath("$.lastName").value("Doe"))
+                .andExpect(jsonPath("$.password").doesNotExist());
+
+        User updated = userRepository.findById(testUser.getId()).orElseThrow();
+        assertThat(updated.getEmail()).isEqualTo("jack@yahoo.com");
+        assertThat(passwordEncoderService.matches("new-password", updated.getPassword())).isTrue();
+    }
+
+    @Test
+    void testDeleteUser() throws Exception {
+        mockMvc.perform(delete("/api/users/" + testUser.getId()))
+                .andExpect(status().isNoContent());
+
+        assertThat(userRepository.existsById(testUser.getId())).isFalse();
+    }
+
+    @Test
+    void testResponseDoesNotContainPassword() throws Exception {
+        String response = mockMvc.perform(get("/api/users/" + testUser.getId()))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        assertThat(response).doesNotContain("password");
+    }
+}
