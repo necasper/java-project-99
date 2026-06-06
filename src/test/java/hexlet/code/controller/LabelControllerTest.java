@@ -3,7 +3,8 @@ package hexlet.code.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import hexlet.code.app.AppApplication;
 import hexlet.code.dto.AuthRequest;
-import hexlet.code.dto.UserCreateDto;
+import hexlet.code.dto.LabelCreateDto;
+import hexlet.code.model.Label;
 import hexlet.code.model.Task;
 import hexlet.code.model.TaskStatus;
 import hexlet.code.model.User;
@@ -24,19 +25,20 @@ import org.springframework.web.context.WebApplicationContext;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
 @SpringBootTest(classes = AppApplication.class)
-class UserControllerTest extends BaseSpringBootTest {
+class LabelControllerTest extends BaseSpringBootTest {
 
     private MockMvc mockMvc;
 
@@ -49,18 +51,18 @@ class UserControllerTest extends BaseSpringBootTest {
     private UserRepository userRepository;
 
     @Autowired
+    private LabelRepository labelRepository;
+
+    @Autowired
     private TaskRepository taskRepository;
 
     @Autowired
     private TaskStatusRepository taskStatusRepository;
 
     @Autowired
-    private LabelRepository labelRepository;
-
-    @Autowired
     private PasswordEncoder passwordEncoder;
 
-    private User testUser;
+    private Label testLabel;
 
     private String authToken;
 
@@ -73,12 +75,16 @@ class UserControllerTest extends BaseSpringBootTest {
         labelRepository.deleteAll();
         taskStatusRepository.deleteAll();
         userRepository.deleteAll();
-        testUser = new User();
-        testUser.setFirstName("John");
-        testUser.setLastName("Doe");
+
+        User testUser = new User();
         testUser.setEmail("john@google.com");
         testUser.setPassword(passwordEncoder.encode("password"));
-        testUser = userRepository.save(testUser);
+        userRepository.save(testUser);
+
+        testLabel = new Label();
+        testLabel.setName("bug");
+        testLabel = labelRepository.save(testLabel);
+
         authToken = login("john@google.com", "password");
     }
 
@@ -99,71 +105,59 @@ class UserControllerTest extends BaseSpringBootTest {
 
     @Test
     void testUnauthorizedWithoutToken() throws Exception {
-        mockMvc.perform(get("/api/users"))
+        mockMvc.perform(get("/api/labels"))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
-    void testGetAllUsers() throws Exception {
-        mockMvc.perform(get("/api/users")
+    void testGetAllLabels() throws Exception {
+        mockMvc.perform(get("/api/labels")
                         .header("Authorization", "Bearer " + authToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].email").value("john@google.com"))
-                .andExpect(jsonPath("$[0].password").doesNotExist());
+                .andExpect(jsonPath("$[0].name").value("bug"));
     }
 
     @Test
-    void testGetUserById() throws Exception {
-        mockMvc.perform(get("/api/users/" + testUser.getId())
+    void testGetLabelById() throws Exception {
+        mockMvc.perform(get("/api/labels/" + testLabel.getId())
                         .header("Authorization", "Bearer " + authToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(testUser.getId()))
-                .andExpect(jsonPath("$.email").value("john@google.com"))
-                .andExpect(jsonPath("$.firstName").value("John"))
-                .andExpect(jsonPath("$.lastName").value("Doe"))
-                .andExpect(jsonPath("$.createdAt").exists())
-                .andExpect(jsonPath("$.password").doesNotExist());
+                .andExpect(jsonPath("$.id").value(testLabel.getId()))
+                .andExpect(jsonPath("$.name").value("bug"))
+                .andExpect(jsonPath("$.createdAt").exists());
     }
 
     @Test
-    void testGetUserNotFound() throws Exception {
-        mockMvc.perform(get("/api/users/999")
+    void testGetLabelNotFound() throws Exception {
+        mockMvc.perform(get("/api/labels/999")
                         .header("Authorization", "Bearer " + authToken))
                 .andExpect(status().isNotFound());
     }
 
     @Test
-    void testCreateUser() throws Exception {
-        UserCreateDto dto = new UserCreateDto();
-        dto.setEmail("jack@google.com");
-        dto.setFirstName("Jack");
-        dto.setLastName("Jons");
-        dto.setPassword("some-password");
+    void testCreateLabel() throws Exception {
+        LabelCreateDto dto = new LabelCreateDto();
+        dto.setName("feature");
 
-        mockMvc.perform(post("/api/users")
+        mockMvc.perform(post("/api/labels")
                         .header("Authorization", "Bearer " + authToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").exists())
-                .andExpect(jsonPath("$.email").value("jack@google.com"))
-                .andExpect(jsonPath("$.firstName").value("Jack"))
-                .andExpect(jsonPath("$.lastName").value("Jons"))
-                .andExpect(jsonPath("$.createdAt").exists())
-                .andExpect(jsonPath("$.password").doesNotExist());
+                .andExpect(jsonPath("$.name").value("feature"))
+                .andExpect(jsonPath("$.createdAt").exists());
 
-        User saved = userRepository.findByEmail("jack@google.com").orElseThrow();
-        assertThat(passwordEncoder.matches("some-password", saved.getPassword())).isTrue();
+        assertThat(labelRepository.findByName("feature")).isPresent();
     }
 
     @Test
-    void testCreateUserInvalid() throws Exception {
-        UserCreateDto dto = new UserCreateDto();
-        dto.setEmail("invalid-email");
-        dto.setPassword("ab");
+    void testCreateLabelInvalid() throws Exception {
+        LabelCreateDto dto = new LabelCreateDto();
+        dto.setName("ab");
 
-        mockMvc.perform(post("/api/users")
+        mockMvc.perform(post("/api/labels")
                         .header("Authorization", "Bearer " + authToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
@@ -171,66 +165,44 @@ class UserControllerTest extends BaseSpringBootTest {
     }
 
     @Test
-    void testUpdateUserPartial() throws Exception {
-        Map<String, String> updates = new HashMap<>();
-        updates.put("email", "jack@yahoo.com");
-        updates.put("password", "new-password");
+    void testCreateLabelDuplicateName() throws Exception {
+        LabelCreateDto dto = new LabelCreateDto();
+        dto.setName("bug");
 
-        mockMvc.perform(put("/api/users/" + testUser.getId())
+        mockMvc.perform(post("/api/labels")
+                        .header("Authorization", "Bearer " + authToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void testUpdateLabel() throws Exception {
+        Map<String, String> updates = new HashMap<>();
+        updates.put("name", "Bug");
+
+        mockMvc.perform(put("/api/labels/" + testLabel.getId())
                         .header("Authorization", "Bearer " + authToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updates)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.email").value("jack@yahoo.com"))
-                .andExpect(jsonPath("$.firstName").value("John"))
-                .andExpect(jsonPath("$.lastName").value("Doe"))
-                .andExpect(jsonPath("$.password").doesNotExist());
+                .andExpect(jsonPath("$.name").value("Bug"));
 
-        User updated = userRepository.findById(testUser.getId()).orElseThrow();
-        assertThat(updated.getEmail()).isEqualTo("jack@yahoo.com");
-        assertThat(passwordEncoder.matches("new-password", updated.getPassword())).isTrue();
+        Label updated = labelRepository.findById(testLabel.getId()).orElseThrow();
+        assertThat(updated.getName()).isEqualTo("Bug");
     }
 
     @Test
-    void testUpdateOtherUserForbidden() throws Exception {
-        User other = new User();
-        other.setEmail("other@google.com");
-        other.setPassword(passwordEncoder.encode("password"));
-        other = userRepository.save(other);
-
-        Map<String, String> updates = new HashMap<>();
-        updates.put("firstName", "Hacker");
-
-        mockMvc.perform(put("/api/users/" + other.getId())
-                        .header("Authorization", "Bearer " + authToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(updates)))
-                .andExpect(status().isForbidden());
-    }
-
-    @Test
-    void testDeleteUser() throws Exception {
-        mockMvc.perform(delete("/api/users/" + testUser.getId())
+    void testDeleteLabel() throws Exception {
+        mockMvc.perform(delete("/api/labels/" + testLabel.getId())
                         .header("Authorization", "Bearer " + authToken))
                 .andExpect(status().isNoContent());
 
-        assertThat(userRepository.existsById(testUser.getId())).isFalse();
+        assertThat(labelRepository.existsById(testLabel.getId())).isFalse();
     }
 
     @Test
-    void testDeleteOtherUserForbidden() throws Exception {
-        User other = new User();
-        other.setEmail("other@google.com");
-        other.setPassword(passwordEncoder.encode("password"));
-        other = userRepository.save(other);
-
-        mockMvc.perform(delete("/api/users/" + other.getId())
-                        .header("Authorization", "Bearer " + authToken))
-                .andExpect(status().isForbidden());
-    }
-
-    @Test
-    void testDeleteUserWithAssignedTasks() throws Exception {
+    void testDeleteLabelWithAssignedTasks() throws Exception {
         TaskStatus status = new TaskStatus();
         status.setName("Draft");
         status.setSlug("draft");
@@ -239,23 +211,22 @@ class UserControllerTest extends BaseSpringBootTest {
         Task task = new Task();
         task.setName("Task");
         task.setTaskStatus(status);
-        task.setAssignee(testUser);
+        task.setLabels(Set.of(testLabel));
         taskRepository.save(task);
 
-        mockMvc.perform(delete("/api/users/" + testUser.getId())
+        mockMvc.perform(delete("/api/labels/" + testLabel.getId())
                         .header("Authorization", "Bearer " + authToken))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
-    void testResponseDoesNotContainPassword() throws Exception {
-        String response = mockMvc.perform(get("/api/users/" + testUser.getId())
-                        .header("Authorization", "Bearer " + authToken))
-                .andExpect(status().isOk())
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
+    void testUnauthorizedCreateWithoutToken() throws Exception {
+        LabelCreateDto dto = new LabelCreateDto();
+        dto.setName("new label");
 
-        assertThat(response).doesNotContain("password");
+        mockMvc.perform(post("/api/labels")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isUnauthorized());
     }
 }

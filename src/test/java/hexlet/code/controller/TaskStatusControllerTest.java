@@ -7,6 +7,7 @@ import hexlet.code.dto.TaskStatusCreateDto;
 import hexlet.code.model.Task;
 import hexlet.code.model.TaskStatus;
 import hexlet.code.model.User;
+import hexlet.code.repository.LabelRepository;
 import hexlet.code.repository.TaskRepository;
 import hexlet.code.repository.TaskStatusRepository;
 import hexlet.code.repository.UserRepository;
@@ -54,6 +55,9 @@ class TaskStatusControllerTest extends BaseSpringBootTest {
     private TaskRepository taskRepository;
 
     @Autowired
+    private LabelRepository labelRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     private TaskStatus testStatus;
@@ -66,6 +70,7 @@ class TaskStatusControllerTest extends BaseSpringBootTest {
                 .apply(springSecurity())
                 .build();
         taskRepository.deleteAll();
+        labelRepository.deleteAll();
         taskStatusRepository.deleteAll();
         userRepository.deleteAll();
 

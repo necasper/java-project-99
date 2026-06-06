@@ -5,6 +5,8 @@ import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.List;
+
 @Getter
 @Setter
 public class TaskUpdateDto {
@@ -20,4 +22,7 @@ public class TaskUpdateDto {
     private String content;
 
     private String status;
+
+    @JsonProperty("taskLabelIds")
+    private List<Long> taskLabelIds;
 }

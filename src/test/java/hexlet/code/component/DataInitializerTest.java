@@ -1,6 +1,7 @@
 package hexlet.code.component;
 
 import hexlet.code.app.AppApplication;
+import hexlet.code.repository.LabelRepository;
 import hexlet.code.repository.TaskStatusRepository;
 import hexlet.code.support.BaseSpringBootTest;
 import org.junit.jupiter.api.Test;
@@ -15,6 +16,9 @@ class DataInitializerTest extends BaseSpringBootTest {
     @Autowired
     private TaskStatusRepository taskStatusRepository;
 
+    @Autowired
+    private LabelRepository labelRepository;
+
     @Test
     void testDefaultTaskStatusesInitialized() {
         assertThat(taskStatusRepository.findBySlug("draft")).isPresent();
@@ -23,5 +27,12 @@ class DataInitializerTest extends BaseSpringBootTest {
         assertThat(taskStatusRepository.findBySlug("to_publish")).isPresent();
         assertThat(taskStatusRepository.findBySlug("published")).isPresent();
         assertThat(taskStatusRepository.count()).isGreaterThanOrEqualTo(5);
+    }
+
+    @Test
+    void testDefaultLabelsInitialized() {
+        assertThat(labelRepository.findByName("feature")).isPresent();
+        assertThat(labelRepository.findByName("bug")).isPresent();
+        assertThat(labelRepository.count()).isGreaterThanOrEqualTo(2);
     }
 }

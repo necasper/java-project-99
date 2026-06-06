@@ -4,9 +4,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import hexlet.code.app.AppApplication;
 import hexlet.code.dto.AuthRequest;
 import hexlet.code.dto.TaskCreateDto;
+import hexlet.code.model.Label;
 import hexlet.code.model.Task;
 import hexlet.code.model.TaskStatus;
 import hexlet.code.model.User;
+import hexlet.code.repository.LabelRepository;
 import hexlet.code.repository.TaskRepository;
 import hexlet.code.repository.TaskStatusRepository;
 import hexlet.code.repository.UserRepository;
@@ -22,6 +24,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -54,6 +57,9 @@ class TaskControllerTest extends BaseSpringBootTest {
     private TaskRepository taskRepository;
 
     @Autowired
+    private LabelRepository labelRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     private User testUser;
@@ -70,6 +76,7 @@ class TaskControllerTest extends BaseSpringBootTest {
                 .apply(springSecurity())
                 .build();
         taskRepository.deleteAll();
+        labelRepository.deleteAll();
         taskStatusRepository.deleteAll();
         userRepository.deleteAll();
 
@@ -211,6 +218,48 @@ class TaskControllerTest extends BaseSpringBootTest {
                 .andExpect(status().isNoContent());
 
         assertThat(taskRepository.existsById(testTask.getId())).isFalse();
+    }
+
+    @Test
+    void testCreateTaskWithLabels() throws Exception {
+        Label bugLabel = new Label();
+        bugLabel.setName("bug");
+        bugLabel = labelRepository.save(bugLabel);
+
+        Label featureLabel = new Label();
+        featureLabel.setName("feature");
+        featureLabel = labelRepository.save(featureLabel);
+
+        TaskCreateDto dto = new TaskCreateDto();
+        dto.setTitle("Task with labels");
+        dto.setStatus("draft");
+        dto.setTaskLabelIds(List.of(bugLabel.getId(), featureLabel.getId()));
+
+        mockMvc.perform(post("/api/tasks")
+                        .header("Authorization", "Bearer " + authToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.taskLabelIds", hasSize(2)))
+                .andExpect(jsonPath("$.taskLabelIds[0]").value(bugLabel.getId().intValue()));
+    }
+
+    @Test
+    void testUpdateTaskLabels() throws Exception {
+        Label bugLabel = new Label();
+        bugLabel.setName("bug");
+        bugLabel = labelRepository.save(bugLabel);
+
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("taskLabelIds", List.of(bugLabel.getId()));
+
+        mockMvc.perform(put("/api/tasks/" + testTask.getId())
+                        .header("Authorization", "Bearer " + authToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updates)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.taskLabelIds", hasSize(1)))
+                .andExpect(jsonPath("$.taskLabelIds[0]").value(bugLabel.getId().intValue()));
     }
 
     @Test
