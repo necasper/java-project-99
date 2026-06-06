@@ -7,6 +7,7 @@ import hexlet.code.exception.BadRequestException;
 import hexlet.code.exception.ResourceNotFoundException;
 import hexlet.code.mapper.TaskStatusMapper;
 import hexlet.code.model.TaskStatus;
+import hexlet.code.repository.TaskRepository;
 import hexlet.code.repository.TaskStatusRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,10 +19,15 @@ import java.util.List;
 public class TaskStatusService {
 
     private final TaskStatusRepository taskStatusRepository;
+    private final TaskRepository taskRepository;
     private final TaskStatusMapper taskStatusMapper;
 
-    public TaskStatusService(TaskStatusRepository taskStatusRepository, TaskStatusMapper taskStatusMapper) {
+    public TaskStatusService(
+            TaskStatusRepository taskStatusRepository,
+            TaskRepository taskRepository,
+            TaskStatusMapper taskStatusMapper) {
         this.taskStatusRepository = taskStatusRepository;
+        this.taskRepository = taskRepository;
         this.taskStatusMapper = taskStatusMapper;
     }
 
@@ -70,6 +76,9 @@ public class TaskStatusService {
     public void delete(Long id) {
         if (!taskStatusRepository.existsById(id)) {
             throw new ResourceNotFoundException("Task status with id " + id + " not found");
+        }
+        if (taskRepository.existsByTaskStatusId(id)) {
+            throw new BadRequestException("Cannot delete task status with assigned tasks");
         }
         taskStatusRepository.deleteById(id);
     }

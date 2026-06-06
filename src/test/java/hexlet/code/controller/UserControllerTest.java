@@ -4,7 +4,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import hexlet.code.app.AppApplication;
 import hexlet.code.dto.AuthRequest;
 import hexlet.code.dto.UserCreateDto;
+import hexlet.code.model.Task;
+import hexlet.code.model.TaskStatus;
 import hexlet.code.model.User;
+import hexlet.code.repository.TaskRepository;
+import hexlet.code.repository.TaskStatusRepository;
 import hexlet.code.repository.UserRepository;
 import hexlet.code.support.BaseSpringBootTest;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,6 +48,12 @@ class UserControllerTest extends BaseSpringBootTest {
     private UserRepository userRepository;
 
     @Autowired
+    private TaskRepository taskRepository;
+
+    @Autowired
+    private TaskStatusRepository taskStatusRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     private User testUser;
@@ -55,6 +65,8 @@ class UserControllerTest extends BaseSpringBootTest {
         mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext)
                 .apply(springSecurity())
                 .build();
+        taskRepository.deleteAll();
+        taskStatusRepository.deleteAll();
         userRepository.deleteAll();
         testUser = new User();
         testUser.setFirstName("John");
@@ -210,6 +222,24 @@ class UserControllerTest extends BaseSpringBootTest {
         mockMvc.perform(delete("/api/users/" + other.getId())
                         .header("Authorization", "Bearer " + authToken))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void testDeleteUserWithAssignedTasks() throws Exception {
+        TaskStatus status = new TaskStatus();
+        status.setName("Draft");
+        status.setSlug("draft");
+        status = taskStatusRepository.save(status);
+
+        Task task = new Task();
+        task.setName("Task");
+        task.setTaskStatus(status);
+        task.setAssignee(testUser);
+        taskRepository.save(task);
+
+        mockMvc.perform(delete("/api/users/" + testUser.getId())
+                        .header("Authorization", "Bearer " + authToken))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

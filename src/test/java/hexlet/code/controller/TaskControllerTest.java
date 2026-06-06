@@ -3,7 +3,7 @@ package hexlet.code.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import hexlet.code.app.AppApplication;
 import hexlet.code.dto.AuthRequest;
-import hexlet.code.dto.TaskStatusCreateDto;
+import hexlet.code.dto.TaskCreateDto;
 import hexlet.code.model.Task;
 import hexlet.code.model.TaskStatus;
 import hexlet.code.model.User;
@@ -35,7 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest(classes = AppApplication.class)
-class TaskStatusControllerTest extends BaseSpringBootTest {
+class TaskControllerTest extends BaseSpringBootTest {
 
     private MockMvc mockMvc;
 
@@ -56,7 +56,11 @@ class TaskStatusControllerTest extends BaseSpringBootTest {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    private TaskStatus testStatus;
+    private User testUser;
+
+    private TaskStatus draftStatus;
+
+    private Task testTask;
 
     private String authToken;
 
@@ -69,15 +73,23 @@ class TaskStatusControllerTest extends BaseSpringBootTest {
         taskStatusRepository.deleteAll();
         userRepository.deleteAll();
 
-        User testUser = new User();
+        testUser = new User();
         testUser.setEmail("john@google.com");
         testUser.setPassword(passwordEncoder.encode("password"));
-        userRepository.save(testUser);
+        testUser = userRepository.save(testUser);
 
-        testStatus = new TaskStatus();
-        testStatus.setName("Draft");
-        testStatus.setSlug("draft");
-        testStatus = taskStatusRepository.save(testStatus);
+        draftStatus = new TaskStatus();
+        draftStatus.setName("Draft");
+        draftStatus.setSlug("draft");
+        draftStatus = taskStatusRepository.save(draftStatus);
+
+        testTask = new Task();
+        testTask.setName("Task 1");
+        testTask.setDescription("Description of task 1");
+        testTask.setIndex(3140);
+        testTask.setTaskStatus(draftStatus);
+        testTask.setAssignee(testUser);
+        testTask = taskRepository.save(testTask);
 
         authToken = login("john@google.com", "password");
     }
@@ -99,65 +111,73 @@ class TaskStatusControllerTest extends BaseSpringBootTest {
 
     @Test
     void testUnauthorizedWithoutToken() throws Exception {
-        mockMvc.perform(get("/api/task_statuses"))
+        mockMvc.perform(get("/api/tasks"))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
-    void testGetAllTaskStatuses() throws Exception {
-        mockMvc.perform(get("/api/task_statuses")
+    void testGetAllTasks() throws Exception {
+        mockMvc.perform(get("/api/tasks")
                         .header("Authorization", "Bearer " + authToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].name").value("Draft"))
-                .andExpect(jsonPath("$[0].slug").value("draft"));
+                .andExpect(jsonPath("$[0].title").value("Task 1"))
+                .andExpect(jsonPath("$[0].content").value("Description of task 1"))
+                .andExpect(jsonPath("$[0].status").value("draft"))
+                .andExpect(jsonPath("$[0].assignee_id").value(testUser.getId().intValue()))
+                .andExpect(jsonPath("$[0].index").value(3140));
     }
 
     @Test
-    void testGetTaskStatusById() throws Exception {
-        mockMvc.perform(get("/api/task_statuses/" + testStatus.getId())
+    void testGetTaskById() throws Exception {
+        mockMvc.perform(get("/api/tasks/" + testTask.getId())
                         .header("Authorization", "Bearer " + authToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(testStatus.getId()))
-                .andExpect(jsonPath("$.name").value("Draft"))
-                .andExpect(jsonPath("$.slug").value("draft"))
+                .andExpect(jsonPath("$.id").value(testTask.getId()))
+                .andExpect(jsonPath("$.title").value("Task 1"))
+                .andExpect(jsonPath("$.content").value("Description of task 1"))
+                .andExpect(jsonPath("$.status").value("draft"))
+                .andExpect(jsonPath("$.assignee_id").value(testUser.getId().intValue()))
                 .andExpect(jsonPath("$.createdAt").exists());
     }
 
     @Test
-    void testGetTaskStatusNotFound() throws Exception {
-        mockMvc.perform(get("/api/task_statuses/999")
+    void testGetTaskNotFound() throws Exception {
+        mockMvc.perform(get("/api/tasks/999")
                         .header("Authorization", "Bearer " + authToken))
                 .andExpect(status().isNotFound());
     }
 
     @Test
-    void testCreateTaskStatus() throws Exception {
-        TaskStatusCreateDto dto = new TaskStatusCreateDto();
-        dto.setName("ToReview");
-        dto.setSlug("to_review");
+    void testCreateTask() throws Exception {
+        TaskCreateDto dto = new TaskCreateDto();
+        dto.setIndex(12);
+        dto.setAssigneeId(testUser.getId());
+        dto.setTitle("Test title");
+        dto.setContent("Test content");
+        dto.setStatus("draft");
 
-        mockMvc.perform(post("/api/task_statuses")
+        mockMvc.perform(post("/api/tasks")
                         .header("Authorization", "Bearer " + authToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").exists())
-                .andExpect(jsonPath("$.name").value("ToReview"))
-                .andExpect(jsonPath("$.slug").value("to_review"))
+                .andExpect(jsonPath("$.title").value("Test title"))
+                .andExpect(jsonPath("$.content").value("Test content"))
+                .andExpect(jsonPath("$.status").value("draft"))
+                .andExpect(jsonPath("$.assignee_id").value(testUser.getId().intValue()))
+                .andExpect(jsonPath("$.index").value(12))
                 .andExpect(jsonPath("$.createdAt").exists());
-
-        TaskStatus saved = taskStatusRepository.findBySlug("to_review").orElseThrow();
-        assertThat(saved.getName()).isEqualTo("ToReview");
     }
 
     @Test
-    void testCreateTaskStatusInvalid() throws Exception {
-        TaskStatusCreateDto dto = new TaskStatusCreateDto();
-        dto.setName("");
-        dto.setSlug("");
+    void testCreateTaskInvalid() throws Exception {
+        TaskCreateDto dto = new TaskCreateDto();
+        dto.setTitle("");
+        dto.setStatus("");
 
-        mockMvc.perform(post("/api/task_statuses")
+        mockMvc.perform(post("/api/tasks")
                         .header("Authorization", "Bearer " + authToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
@@ -165,69 +185,41 @@ class TaskStatusControllerTest extends BaseSpringBootTest {
     }
 
     @Test
-    void testCreateTaskStatusDuplicateSlug() throws Exception {
-        TaskStatusCreateDto dto = new TaskStatusCreateDto();
-        dto.setName("Another Draft");
-        dto.setSlug("draft");
+    void testUpdateTaskPartial() throws Exception {
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("title", "New title");
+        updates.put("content", "New content");
 
-        mockMvc.perform(post("/api/task_statuses")
-                        .header("Authorization", "Bearer " + authToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(dto)))
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    void testUpdateTaskStatusPartial() throws Exception {
-        Map<String, String> updates = new HashMap<>();
-        updates.put("name", "newStatus");
-
-        mockMvc.perform(put("/api/task_statuses/" + testStatus.getId())
+        mockMvc.perform(put("/api/tasks/" + testTask.getId())
                         .header("Authorization", "Bearer " + authToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updates)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name").value("newStatus"))
-                .andExpect(jsonPath("$.slug").value("draft"));
+                .andExpect(jsonPath("$.title").value("New title"))
+                .andExpect(jsonPath("$.content").value("New content"))
+                .andExpect(jsonPath("$.status").value("draft"));
 
-        TaskStatus updated = taskStatusRepository.findById(testStatus.getId()).orElseThrow();
-        assertThat(updated.getName()).isEqualTo("newStatus");
+        Task updated = taskRepository.findById(testTask.getId()).orElseThrow();
+        assertThat(updated.getName()).isEqualTo("New title");
+        assertThat(updated.getDescription()).isEqualTo("New content");
     }
 
     @Test
-    void testDeleteTaskStatus() throws Exception {
-        mockMvc.perform(delete("/api/task_statuses/" + testStatus.getId())
+    void testDeleteTask() throws Exception {
+        mockMvc.perform(delete("/api/tasks/" + testTask.getId())
                         .header("Authorization", "Bearer " + authToken))
                 .andExpect(status().isNoContent());
 
-        assertThat(taskStatusRepository.existsById(testStatus.getId())).isFalse();
-    }
-
-    @Test
-    void testDeleteTaskStatusWithAssignedTasks() throws Exception {
-        User assignee = new User();
-        assignee.setEmail("assignee@google.com");
-        assignee.setPassword(passwordEncoder.encode("password"));
-        assignee = userRepository.save(assignee);
-
-        Task task = new Task();
-        task.setName("Task");
-        task.setTaskStatus(testStatus);
-        task.setAssignee(assignee);
-        taskRepository.save(task);
-
-        mockMvc.perform(delete("/api/task_statuses/" + testStatus.getId())
-                        .header("Authorization", "Bearer " + authToken))
-                .andExpect(status().isBadRequest());
+        assertThat(taskRepository.existsById(testTask.getId())).isFalse();
     }
 
     @Test
     void testUnauthorizedCreateWithoutToken() throws Exception {
-        TaskStatusCreateDto dto = new TaskStatusCreateDto();
-        dto.setName("New");
-        dto.setSlug("new");
+        TaskCreateDto dto = new TaskCreateDto();
+        dto.setTitle("Test title");
+        dto.setStatus("draft");
 
-        mockMvc.perform(post("/api/task_statuses")
+        mockMvc.perform(post("/api/tasks")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isUnauthorized());

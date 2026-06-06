@@ -7,6 +7,7 @@ import hexlet.code.exception.BadRequestException;
 import hexlet.code.exception.ResourceNotFoundException;
 import hexlet.code.mapper.UserMapper;
 import hexlet.code.model.User;
+import hexlet.code.repository.TaskRepository;
 import hexlet.code.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -19,14 +20,17 @@ import java.util.List;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final TaskRepository taskRepository;
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
 
     public UserService(
             UserRepository userRepository,
+            TaskRepository taskRepository,
             UserMapper userMapper,
             PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.taskRepository = taskRepository;
         this.userMapper = userMapper;
         this.passwordEncoder = passwordEncoder;
     }
@@ -81,6 +85,9 @@ public class UserService {
     public void delete(Long id) {
         if (!userRepository.existsById(id)) {
             throw new ResourceNotFoundException("User with id " + id + " not found");
+        }
+        if (taskRepository.existsByAssigneeId(id)) {
+            throw new BadRequestException("Cannot delete user with assigned tasks");
         }
         userRepository.deleteById(id);
     }
