@@ -6,6 +6,7 @@ import hexlet.code.dto.AuthRequest;
 import hexlet.code.dto.UserCreateDto;
 import hexlet.code.model.User;
 import hexlet.code.repository.UserRepository;
+import hexlet.code.support.BaseSpringBootTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,7 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
 @SpringBootTest(classes = AppApplication.class)
-class UserControllerTest {
+class UserControllerTest extends BaseSpringBootTest {
 
     private MockMvc mockMvc;
 

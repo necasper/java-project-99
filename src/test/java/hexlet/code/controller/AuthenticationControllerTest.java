@@ -5,6 +5,7 @@ import hexlet.code.app.AppApplication;
 import hexlet.code.dto.AuthRequest;
 import hexlet.code.model.User;
 import hexlet.code.repository.UserRepository;
+import hexlet.code.support.BaseSpringBootTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +22,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
 @SpringBootTest(classes = AppApplication.class)
-class AuthenticationControllerTest {
+class AuthenticationControllerTest extends BaseSpringBootTest {
 
     private MockMvc mockMvc;
 
@@ -44,7 +45,7 @@ class AuthenticationControllerTest {
         userRepository.deleteAll();
         User admin = new User();
         admin.setEmail("hexlet@example.com");
-        admin.setPassword(passwordEncoder.encode("qwerty"));
+        admin.setPassword(passwordEncoder.encode(TEST_ADMIN_PASSWORD));
         userRepository.save(admin);
     }
 
@@ -52,7 +53,7 @@ class AuthenticationControllerTest {
     void testLoginSuccess() throws Exception {
         AuthRequest authRequest = new AuthRequest();
         authRequest.setUsername("hexlet@example.com");
-        authRequest.setPassword("qwerty");
+        authRequest.setPassword(TEST_ADMIN_PASSWORD);
 
         mockMvc.perform(post("/api/login")
                         .contentType(MediaType.APPLICATION_JSON)

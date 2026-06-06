@@ -31,6 +31,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/welcome").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/login").permitAll()
                         .requestMatchers("/h2-console/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/", "/index.html", "/assets/**").permitAll()
+                        .requestMatchers(HttpMethod.GET,
+                                "/{path:^(?!api|h2-console|welcome|assets).*}/**").permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.decoder(jwtDecoder)))
                 .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
