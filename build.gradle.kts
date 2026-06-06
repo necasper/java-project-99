@@ -4,6 +4,7 @@ plugins {
 	id("org.springframework.boot") version "4.0.6"
 	id("io.spring.dependency-management") version "1.1.7"
 	id("org.sonarqube") version "7.3.0.8198"
+	id("io.sentry.jvm.gradle") version "6.10.0"
 }
 
 group = "hexlet.code"
@@ -62,6 +63,15 @@ tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
 				}
 			}
 	}
+}
+
+val sentryAuthToken = System.getenv("SENTRY_AUTH_TOKEN")
+
+sentry {
+	includeSourceContext.set(!sentryAuthToken.isNullOrBlank())
+	org.set("necasper")
+	projectName.set("java-spring-boot")
+	authToken.set(sentryAuthToken)
 }
 
 sonar {

@@ -16,7 +16,10 @@ COPY config config
 
 RUN ./gradlew --no-daemon build
 
+ADD https://repo1.maven.org/maven2/io/sentry/sentry-opentelemetry-agent/8.43.1/sentry-opentelemetry-agent-8.43.1.jar sentry-opentelemetry-agent.jar
+
 ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=60.0 -XX:InitialRAMPercentage=50.0"
+ENV SENTRY_AUTO_INIT=false
 EXPOSE 8080
 
-CMD ["java", "-jar", "build/libs/java-project-99-0.0.1-SNAPSHOT.jar"]
+CMD ["java", "-javaagent:sentry-opentelemetry-agent.jar", "-jar", "build/libs/java-project-99-0.0.1-SNAPSHOT.jar"]

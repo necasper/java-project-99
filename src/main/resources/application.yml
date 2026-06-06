@@ -17,3 +17,7 @@ server:
 springdoc:
   swagger-ui:
     path: /docs
+
+sentry:
+  dsn: https://8b9371ff6e68f74339259f1855db31ec@o4511520372883456.ingest.de.sentry.io/4511520383565904
+  send-default-pii: true
