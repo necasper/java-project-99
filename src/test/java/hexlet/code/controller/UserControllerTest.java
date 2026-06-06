@@ -2,15 +2,16 @@ package hexlet.code.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import hexlet.code.app.AppApplication;
+import hexlet.code.dto.AuthRequest;
 import hexlet.code.dto.UserCreateDto;
 import hexlet.code.model.User;
 import hexlet.code.repository.UserRepository;
-import hexlet.code.service.PasswordEncoderService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
@@ -26,6 +27,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
 @SpringBootTest(classes = AppApplication.class)
 class UserControllerTest {
@@ -41,25 +43,52 @@ class UserControllerTest {
     private UserRepository userRepository;
 
     @Autowired
-    private PasswordEncoderService passwordEncoderService;
+    private PasswordEncoder passwordEncoder;
 
     private User testUser;
 
+    private String authToken;
+
     @BeforeEach
-    void setUp() {
-        mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
+    void setUp() throws Exception {
+        mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext)
+                .apply(springSecurity())
+                .build();
         userRepository.deleteAll();
         testUser = new User();
         testUser.setFirstName("John");
         testUser.setLastName("Doe");
         testUser.setEmail("john@google.com");
-        testUser.setPassword(passwordEncoderService.encode("password"));
+        testUser.setPassword(passwordEncoder.encode("password"));
         testUser = userRepository.save(testUser);
+        authToken = login("john@google.com", "password");
+    }
+
+    private String login(String email, String password) throws Exception {
+        AuthRequest authRequest = new AuthRequest();
+        authRequest.setUsername(email);
+        authRequest.setPassword(password);
+
+        return mockMvc.perform(post("/api/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(authRequest)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString()
+                .trim();
+    }
+
+    @Test
+    void testUnauthorizedWithoutToken() throws Exception {
+        mockMvc.perform(get("/api/users"))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
     void testGetAllUsers() throws Exception {
-        mockMvc.perform(get("/api/users"))
+        mockMvc.perform(get("/api/users")
+                        .header("Authorization", "Bearer " + authToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].email").value("john@google.com"))
@@ -68,7 +97,8 @@ class UserControllerTest {
 
     @Test
     void testGetUserById() throws Exception {
-        mockMvc.perform(get("/api/users/" + testUser.getId()))
+        mockMvc.perform(get("/api/users/" + testUser.getId())
+                        .header("Authorization", "Bearer " + authToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(testUser.getId()))
                 .andExpect(jsonPath("$.email").value("john@google.com"))
@@ -80,7 +110,8 @@ class UserControllerTest {
 
     @Test
     void testGetUserNotFound() throws Exception {
-        mockMvc.perform(get("/api/users/999"))
+        mockMvc.perform(get("/api/users/999")
+                        .header("Authorization", "Bearer " + authToken))
                 .andExpect(status().isNotFound());
     }
 
@@ -93,6 +124,7 @@ class UserControllerTest {
         dto.setPassword("some-password");
 
         mockMvc.perform(post("/api/users")
+                        .header("Authorization", "Bearer " + authToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isCreated())
@@ -104,7 +136,7 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.password").doesNotExist());
 
         User saved = userRepository.findByEmail("jack@google.com").orElseThrow();
-        assertThat(passwordEncoderService.matches("some-password", saved.getPassword())).isTrue();
+        assertThat(passwordEncoder.matches("some-password", saved.getPassword())).isTrue();
     }
 
     @Test
@@ -114,6 +146,7 @@ class UserControllerTest {
         dto.setPassword("ab");
 
         mockMvc.perform(post("/api/users")
+                        .header("Authorization", "Bearer " + authToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isBadRequest());
@@ -126,6 +159,7 @@ class UserControllerTest {
         updates.put("password", "new-password");
 
         mockMvc.perform(put("/api/users/" + testUser.getId())
+                        .header("Authorization", "Bearer " + authToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updates)))
                 .andExpect(status().isOk())
@@ -136,20 +170,51 @@ class UserControllerTest {
 
         User updated = userRepository.findById(testUser.getId()).orElseThrow();
         assertThat(updated.getEmail()).isEqualTo("jack@yahoo.com");
-        assertThat(passwordEncoderService.matches("new-password", updated.getPassword())).isTrue();
+        assertThat(passwordEncoder.matches("new-password", updated.getPassword())).isTrue();
+    }
+
+    @Test
+    void testUpdateOtherUserForbidden() throws Exception {
+        User other = new User();
+        other.setEmail("other@google.com");
+        other.setPassword(passwordEncoder.encode("password"));
+        other = userRepository.save(other);
+
+        Map<String, String> updates = new HashMap<>();
+        updates.put("firstName", "Hacker");
+
+        mockMvc.perform(put("/api/users/" + other.getId())
+                        .header("Authorization", "Bearer " + authToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updates)))
+                .andExpect(status().isForbidden());
     }
 
     @Test
     void testDeleteUser() throws Exception {
-        mockMvc.perform(delete("/api/users/" + testUser.getId()))
+        mockMvc.perform(delete("/api/users/" + testUser.getId())
+                        .header("Authorization", "Bearer " + authToken))
                 .andExpect(status().isNoContent());
 
         assertThat(userRepository.existsById(testUser.getId())).isFalse();
     }
 
     @Test
+    void testDeleteOtherUserForbidden() throws Exception {
+        User other = new User();
+        other.setEmail("other@google.com");
+        other.setPassword(passwordEncoder.encode("password"));
+        other = userRepository.save(other);
+
+        mockMvc.perform(delete("/api/users/" + other.getId())
+                        .header("Authorization", "Bearer " + authToken))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void testResponseDoesNotContainPassword() throws Exception {
-        String response = mockMvc.perform(get("/api/users/" + testUser.getId()))
+        String response = mockMvc.perform(get("/api/users/" + testUser.getId())
+                        .header("Authorization", "Bearer " + authToken))
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()

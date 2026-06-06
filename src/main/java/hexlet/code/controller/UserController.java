@@ -6,6 +6,7 @@ import hexlet.code.dto.UserUpdateDto;
 import hexlet.code.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -45,12 +46,14 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("@userService.getEmailById(#id) == authentication.name")
     public UserDto update(@PathVariable Long id, @Valid @RequestBody UserUpdateDto dto) {
         return userService.update(id, dto);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("@userService.getEmailById(#id) == authentication.name")
     public void delete(@PathVariable Long id) {
         userService.delete(id);
     }

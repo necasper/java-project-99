@@ -2,7 +2,7 @@ package hexlet.code.component;
 
 import hexlet.code.model.User;
 import hexlet.code.repository.UserRepository;
-import hexlet.code.service.PasswordEncoderService;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
@@ -14,11 +14,11 @@ public class DataInitializer implements ApplicationRunner {
     private static final String ADMIN_PASSWORD = "qwerty";
 
     private final UserRepository userRepository;
-    private final PasswordEncoderService passwordEncoderService;
+    private final PasswordEncoder passwordEncoder;
 
-    public DataInitializer(UserRepository userRepository, PasswordEncoderService passwordEncoderService) {
+    public DataInitializer(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
-        this.passwordEncoderService = passwordEncoderService;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
@@ -26,7 +26,7 @@ public class DataInitializer implements ApplicationRunner {
         if (userRepository.findByEmail(ADMIN_EMAIL).isEmpty()) {
             User admin = new User();
             admin.setEmail(ADMIN_EMAIL);
-            admin.setPassword(passwordEncoderService.encode(ADMIN_PASSWORD));
+            admin.setPassword(passwordEncoder.encode(ADMIN_PASSWORD));
             userRepository.save(admin);
         }
     }
