@@ -11,3 +11,8 @@ spring:
 
 jwt:
   secret: dev-only-jwt-secret-not-for-production-use
+
+app:
+  admin:
+    email: hexlet@example.com
+    password: qwerty

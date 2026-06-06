@@ -2,16 +2,20 @@ package hexlet.code.component;
 
 import hexlet.code.model.User;
 import hexlet.code.repository.UserRepository;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 @Component
 public class DataInitializer implements ApplicationRunner {
 
-    private static final String ADMIN_EMAIL = "hexlet@example.com";
-    private static final String ADMIN_PASSWORD = "qwerty";
+    @Value("${app.admin.email}")
+    private String adminEmail;
+
+    @Value("${app.admin.password}")
+    private String adminPassword;
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -23,10 +27,10 @@ public class DataInitializer implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        if (userRepository.findByEmail(ADMIN_EMAIL).isEmpty()) {
+        if (userRepository.findByEmail(adminEmail).isEmpty()) {
             User admin = new User();
-            admin.setEmail(ADMIN_EMAIL);
-            admin.setPassword(passwordEncoder.encode(ADMIN_PASSWORD));
+            admin.setEmail(adminEmail);
+            admin.setPassword(passwordEncoder.encode(adminPassword));
             userRepository.save(admin);
         }
     }
