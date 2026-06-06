@@ -2,6 +2,7 @@ package hexlet.code.controller;
 
 import hexlet.code.dto.TaskCreateDto;
 import hexlet.code.dto.TaskDto;
+import hexlet.code.dto.TaskFilterParams;
 import hexlet.code.dto.TaskUpdateDto;
 import hexlet.code.service.TaskService;
 import jakarta.validation.Valid;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -29,8 +31,17 @@ public class TaskController {
     }
 
     @GetMapping
-    public List<TaskDto> getAll() {
-        return taskService.findAll();
+    public List<TaskDto> getAll(
+            @RequestParam(required = false) String titleCont,
+            @RequestParam(required = false) Long assigneeId,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Long labelId) {
+        TaskFilterParams filter = new TaskFilterParams();
+        filter.setTitleCont(titleCont);
+        filter.setAssigneeId(assigneeId);
+        filter.setStatus(status);
+        filter.setLabelId(labelId);
+        return taskService.findAll(filter);
     }
 
     @GetMapping("/{id}")

@@ -26,6 +26,7 @@ import org.springframework.web.context.WebApplicationContext;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
@@ -260,6 +261,121 @@ class TaskControllerTest extends BaseSpringBootTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.taskLabelIds", hasSize(1)))
                 .andExpect(jsonPath("$.taskLabelIds[0]").value(bugLabel.getId().intValue()));
+    }
+
+    @Test
+    void testFilterByTitleCont() throws Exception {
+        Task matchingTask = new Task();
+        matchingTask.setName("Create new version");
+        matchingTask.setDescription("Description");
+        matchingTask.setTaskStatus(draftStatus);
+        matchingTask.setAssignee(testUser);
+        taskRepository.save(matchingTask);
+
+        mockMvc.perform(get("/api/tasks")
+                        .param("titleCont", "create")
+                        .header("Authorization", "Bearer " + authToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].title").value("Create new version"));
+    }
+
+    @Test
+    void testFilterByAssigneeId() throws Exception {
+        User otherUser = new User();
+        otherUser.setEmail("other@google.com");
+        otherUser.setPassword(passwordEncoder.encode("password"));
+        otherUser = userRepository.save(otherUser);
+
+        Task otherTask = new Task();
+        otherTask.setName("Other task");
+        otherTask.setTaskStatus(draftStatus);
+        otherTask.setAssignee(otherUser);
+        taskRepository.save(otherTask);
+
+        mockMvc.perform(get("/api/tasks")
+                        .param("assigneeId", testUser.getId().toString())
+                        .header("Authorization", "Bearer " + authToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].title").value("Task 1"));
+    }
+
+    @Test
+    void testFilterByStatus() throws Exception {
+        TaskStatus reviewStatus = new TaskStatus();
+        reviewStatus.setName("To Review");
+        reviewStatus.setSlug("to_review");
+        reviewStatus = taskStatusRepository.save(reviewStatus);
+
+        Task reviewTask = new Task();
+        reviewTask.setName("Review task");
+        reviewTask.setTaskStatus(reviewStatus);
+        reviewTask.setAssignee(testUser);
+        taskRepository.save(reviewTask);
+
+        mockMvc.perform(get("/api/tasks")
+                        .param("status", "to_review")
+                        .header("Authorization", "Bearer " + authToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].title").value("Review task"))
+                .andExpect(jsonPath("$[0].status").value("to_review"));
+    }
+
+    @Test
+    void testFilterByLabelId() throws Exception {
+        Label bugLabel = new Label();
+        bugLabel.setName("bug");
+        bugLabel = labelRepository.save(bugLabel);
+
+        Task labeledTask = new Task();
+        labeledTask.setName("Bug task");
+        labeledTask.setTaskStatus(draftStatus);
+        labeledTask.setAssignee(testUser);
+        labeledTask.setLabels(Set.of(bugLabel));
+        taskRepository.save(labeledTask);
+
+        mockMvc.perform(get("/api/tasks")
+                        .param("labelId", bugLabel.getId().toString())
+                        .header("Authorization", "Bearer " + authToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].title").value("Bug task"));
+    }
+
+    @Test
+    void testFilterCombined() throws Exception {
+        TaskStatus fixedStatus = new TaskStatus();
+        fixedStatus.setName("To Be Fixed");
+        fixedStatus.setSlug("to_be_fixed");
+        fixedStatus = taskStatusRepository.save(fixedStatus);
+
+        Label bugLabel = new Label();
+        bugLabel.setName("bug");
+        bugLabel = labelRepository.save(bugLabel);
+
+        Task matchingTask = new Task();
+        matchingTask.setName("Create new version");
+        matchingTask.setDescription("Description of task");
+        matchingTask.setIndex(3245);
+        matchingTask.setTaskStatus(fixedStatus);
+        matchingTask.setAssignee(testUser);
+        matchingTask.setLabels(Set.of(bugLabel));
+        taskRepository.save(matchingTask);
+
+        mockMvc.perform(get("/api/tasks")
+                        .param("titleCont", "create")
+                        .param("assigneeId", testUser.getId().toString())
+                        .param("status", "to_be_fixed")
+                        .param("labelId", bugLabel.getId().toString())
+                        .header("Authorization", "Bearer " + authToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].title").value("Create new version"))
+                .andExpect(jsonPath("$[0].status").value("to_be_fixed"))
+                .andExpect(jsonPath("$[0].assignee_id").value(testUser.getId().intValue()))
+                .andExpect(jsonPath("$[0].index").value(3245));
     }
 
     @Test

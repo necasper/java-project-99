@@ -2,7 +2,9 @@ package hexlet.code.service;
 
 import hexlet.code.dto.TaskCreateDto;
 import hexlet.code.dto.TaskDto;
+import hexlet.code.dto.TaskFilterParams;
 import hexlet.code.dto.TaskUpdateDto;
+import hexlet.code.spec.TaskSpecifications;
 import hexlet.code.exception.BadRequestException;
 import hexlet.code.exception.ResourceNotFoundException;
 import hexlet.code.mapper.TaskMapper;
@@ -43,8 +45,8 @@ public class TaskService {
         this.taskMapper = taskMapper;
     }
 
-    public List<TaskDto> findAll() {
-        return taskRepository.findAll().stream()
+    public List<TaskDto> findAll(TaskFilterParams filter) {
+        return taskRepository.findAll(TaskSpecifications.withFilter(filter)).stream()
                 .map(taskMapper::toDto)
                 .toList();
     }
