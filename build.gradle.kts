@@ -45,6 +45,24 @@ tasks.withType<Test> {
 	useJUnitPlatform()
 }
 
+tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
+	val envFile = file(".env")
+	if (envFile.exists()) {
+		envFile.readLines()
+			.map { it.trim() }
+			.filter { it.isNotEmpty() && !it.startsWith("#") }
+			.forEach { line ->
+				val separatorIndex = line.indexOf('=')
+				if (separatorIndex > 0) {
+					environment(
+						line.substring(0, separatorIndex).trim(),
+						line.substring(separatorIndex + 1).trim()
+					)
+				}
+			}
+	}
+}
+
 sonar {
 	properties {
 		val projectKey = System.getenv("SONAR_PROJECT_KEY")?.takeIf { it.isNotBlank() }

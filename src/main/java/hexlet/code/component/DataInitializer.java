@@ -1,6 +1,8 @@
 package hexlet.code.component;
 
+import hexlet.code.model.TaskStatus;
 import hexlet.code.model.User;
+import hexlet.code.repository.TaskStatusRepository;
 import hexlet.code.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
@@ -18,20 +20,47 @@ public class DataInitializer implements ApplicationRunner {
     private String adminPassword;
 
     private final UserRepository userRepository;
+    private final TaskStatusRepository taskStatusRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public DataInitializer(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public DataInitializer(
+            UserRepository userRepository,
+            TaskStatusRepository taskStatusRepository,
+            PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.taskStatusRepository = taskStatusRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
     @Override
     public void run(ApplicationArguments args) {
+        initAdmin();
+        initTaskStatuses();
+    }
+
+    private void initAdmin() {
         if (userRepository.findByEmail(adminEmail).isEmpty()) {
             User admin = new User();
             admin.setEmail(adminEmail);
             admin.setPassword(passwordEncoder.encode(adminPassword));
             userRepository.save(admin);
+        }
+    }
+
+    private void initTaskStatuses() {
+        createStatusIfAbsent("Draft", "draft");
+        createStatusIfAbsent("To Review", "to_review");
+        createStatusIfAbsent("To Be Fixed", "to_be_fixed");
+        createStatusIfAbsent("To Publish", "to_publish");
+        createStatusIfAbsent("Published", "published");
+    }
+
+    private void createStatusIfAbsent(String name, String slug) {
+        if (taskStatusRepository.findBySlug(slug).isEmpty()) {
+            TaskStatus taskStatus = new TaskStatus();
+            taskStatus.setName(name);
+            taskStatus.setSlug(slug);
+            taskStatusRepository.save(taskStatus);
         }
     }
 }
