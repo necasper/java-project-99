@@ -15,4 +15,4 @@ jwt:
 app:
   admin:
     email: hexlet@example.com
-    password: ${ADMIN_PASSWORD}
+    password: ${ADMIN_PASSWORD:password}

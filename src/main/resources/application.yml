@@ -2,7 +2,7 @@ spring:
   application:
     name: app
   profiles:
-    active: ${SPRING_PROFILES_ACTIVE:dev}
+    default: dev
   flyway:
     enabled: true
     locations: classpath:db/migration
