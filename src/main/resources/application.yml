@@ -1,6 +1,8 @@
 spring:
   application:
     name: app
+  config:
+    import: optional:classpath:application-dev.yml
   profiles:
     default: dev
   flyway:
