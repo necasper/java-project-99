@@ -6,9 +6,10 @@ import com.nimbusds.jose.jwk.OctetSequenceKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -24,12 +25,19 @@ import hexlet.code.service.CustomUserDetailsService;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
+import java.util.Base64;
 
 @Configuration
 public class JwtSecurityConfig {
 
-    @Value("${jwt.secret}")
-    private String jwtSecret;
+    private static final int GENERATED_SECRET_BYTES = 32;
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
+    @Autowired
+    private Environment environment;
+
+    private String cachedJwtSecret;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -60,10 +68,33 @@ public class JwtSecurityConfig {
     }
 
     private byte[] secretKeyBytes() {
-        return jwtSecret.getBytes(StandardCharsets.UTF_8);
+        return getJwtSecret().getBytes(StandardCharsets.UTF_8);
     }
 
     private SecretKey secretKey() {
         return new SecretKeySpec(secretKeyBytes(), "HmacSHA256");
+    }
+
+    private String getJwtSecret() {
+        if (cachedJwtSecret != null && !cachedJwtSecret.isBlank()) {
+            return cachedJwtSecret;
+        }
+
+        var fromProperties = environment.getProperty("jwt.secret");
+        if (fromProperties != null && !fromProperties.isBlank()) {
+            cachedJwtSecret = fromProperties;
+            return cachedJwtSecret;
+        }
+
+        var fromEnv = environment.getProperty("JWT_SECRET");
+        if (fromEnv != null && !fromEnv.isBlank()) {
+            cachedJwtSecret = fromEnv;
+            return cachedJwtSecret;
+        }
+
+        byte[] randomBytes = new byte[GENERATED_SECRET_BYTES];
+        SECURE_RANDOM.nextBytes(randomBytes);
+        cachedJwtSecret = Base64.getEncoder().encodeToString(randomBytes);
+        return cachedJwtSecret;
     }
 }

@@ -6,6 +6,8 @@ import hexlet.code.model.User;
 import hexlet.code.repository.LabelRepository;
 import hexlet.code.repository.TaskStatusRepository;
 import hexlet.code.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -15,10 +17,12 @@ import org.springframework.stereotype.Component;
 @Component
 public class DataInitializer implements ApplicationRunner {
 
-    @Value("${app.admin.email}")
+    private static final Logger LOGGER = LoggerFactory.getLogger(DataInitializer.class);
+
+    @Value("${app.admin.email:${ADMIN_EMAIL:hexlet@example.com}}")
     private String adminEmail;
 
-    @Value("${app.admin.password}")
+    @Value("${app.admin.password:${ADMIN_PASSWORD:}}")
     private String adminPassword;
 
     private final UserRepository userRepository;
@@ -45,6 +49,11 @@ public class DataInitializer implements ApplicationRunner {
     }
 
     private void initAdmin() {
+        if (adminPassword == null || adminPassword.isBlank()) {
+            LOGGER.warn("Admin user initialization skipped: ADMIN_PASSWORD is not configured");
+            return;
+        }
+
         if (userRepository.findByEmail(adminEmail).isEmpty()) {
             User admin = new User();
             admin.setEmail(adminEmail);
