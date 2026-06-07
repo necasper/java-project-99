@@ -22,4 +22,4 @@ ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=60.0 -XX:InitialRAM
 ENV SENTRY_AUTO_INIT=false
 EXPOSE 8080
 
-CMD ["java", "-javaagent:sentry-opentelemetry-agent.jar", "-jar", "build/libs/java-project-99-0.0.1-SNAPSHOT.jar"]
+CMD ["sh", "-c", "java -javaagent:sentry-opentelemetry-agent.jar -jar $(ls build/libs/*.jar | grep -v -- '-plain\\.jar$' | head -n 1)"]
