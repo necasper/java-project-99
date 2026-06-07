@@ -1,7 +1,7 @@
 package hexlet.code.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import hexlet.code.app.AppApplication;
+import hexlet.code.AppApplication;
 import hexlet.code.dto.AuthRequest;
 import hexlet.code.dto.TaskStatusCreateDto;
 import hexlet.code.model.Task;

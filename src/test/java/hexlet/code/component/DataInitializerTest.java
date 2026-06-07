@@ -1,6 +1,6 @@
 package hexlet.code.component;
 
-import hexlet.code.app.AppApplication;
+import hexlet.code.AppApplication;
 import hexlet.code.repository.LabelRepository;
 import hexlet.code.repository.TaskStatusRepository;
 import hexlet.code.support.BaseSpringBootTest;
