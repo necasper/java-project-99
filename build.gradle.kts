@@ -1,5 +1,6 @@
 plugins {
 	java
+	jacoco
 	checkstyle
 	id("org.springframework.boot") version "4.0.6"
 	id("io.spring.dependency-management") version "1.1.7"
@@ -45,6 +46,19 @@ dependencyLocking {
 
 tasks.withType<Test> {
 	useJUnitPlatform()
+	finalizedBy(tasks.jacocoTestReport)
+}
+
+tasks.jacocoTestReport {
+	dependsOn(tasks.test)
+	reports {
+		xml.required.set(true)
+		html.required.set(true)
+	}
+}
+
+tasks.named("sonar") {
+	dependsOn(tasks.jacocoTestReport)
 }
 
 tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
@@ -83,5 +97,9 @@ sonar {
 		property("sonar.projectKey", projectKey)
 		property("sonar.organization", organization)
 		property("sonar.host.url", "https://sonarcloud.io")
+		property(
+			"sonar.coverage.jacoco.xmlReportPaths",
+			layout.buildDirectory.file("reports/jacoco/test/jacocoTestReport.xml").get().asFile.path
+		)
 	}
 }
