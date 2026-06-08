@@ -11,8 +11,9 @@ group = "hexlet.code"
 version = "0.0.1-SNAPSHOT"
 
 java {
-	sourceCompatibility = JavaVersion.VERSION_21
-	targetCompatibility = JavaVersion.VERSION_21
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(25)
+	}
 }
 
 repositories {
@@ -82,8 +83,5 @@ sonar {
 		property("sonar.projectKey", projectKey)
 		property("sonar.organization", organization)
 		property("sonar.host.url", "https://sonarcloud.io")
-		System.getenv("SONAR_TOKEN")?.takeIf { it.isNotBlank() }?.let { token ->
-			property("sonar.token", token)
-		}
 	}
 }

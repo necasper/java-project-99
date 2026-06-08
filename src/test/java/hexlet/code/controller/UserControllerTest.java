@@ -1,13 +1,16 @@
 package hexlet.code.controller;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import hexlet.code.AppApplication;
 import hexlet.code.dto.AuthRequest;
 import hexlet.code.dto.UserCreateDto;
+import hexlet.code.dto.UserDto;
+import hexlet.code.mapper.UserMapper;
 import hexlet.code.model.Task;
 import hexlet.code.model.TaskStatus;
 import hexlet.code.model.User;
-import hexlet.code.repository.LabelRepository;
 import hexlet.code.repository.TaskRepository;
 import hexlet.code.repository.TaskStatusRepository;
 import hexlet.code.repository.UserRepository;
@@ -23,10 +26,10 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -43,7 +46,7 @@ class UserControllerTest extends BaseSpringBootTest {
     @Autowired
     private WebApplicationContext webApplicationContext;
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     @Autowired
     private UserRepository userRepository;
@@ -55,10 +58,10 @@ class UserControllerTest extends BaseSpringBootTest {
     private TaskStatusRepository taskStatusRepository;
 
     @Autowired
-    private LabelRepository labelRepository;
+    private PasswordEncoder passwordEncoder;
 
     @Autowired
-    private PasswordEncoder passwordEncoder;
+    private UserMapper userMapper;
 
     private User testUser;
 
@@ -70,8 +73,6 @@ class UserControllerTest extends BaseSpringBootTest {
                 .apply(springSecurity())
                 .build();
         taskRepository.deleteAll();
-        labelRepository.deleteAll();
-        taskStatusRepository.deleteAll();
         userRepository.deleteAll();
         testUser = new User();
         testUser.setFirstName("John");
@@ -105,12 +106,18 @@ class UserControllerTest extends BaseSpringBootTest {
 
     @Test
     void testGetAllUsers() throws Exception {
-        mockMvc.perform(get("/api/users")
+        var response = mockMvc.perform(get("/api/users")
                         .header("Authorization", "Bearer " + authToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].email").value("john@google.com"))
-                .andExpect(jsonPath("$[0].password").doesNotExist());
+                .andReturn()
+                .getResponse();
+        var body = response.getContentAsString();
+
+        List<UserDto> userDtos = objectMapper.readValue(body, new TypeReference<>() { });
+        var actual = userDtos.stream().map(userMapper::map).toList();
+        var expected = userRepository.findAll();
+
+        assertThat(actual).containsExactlyInAnyOrderElementsOf(expected);
     }
 
     @Test
@@ -231,10 +238,7 @@ class UserControllerTest extends BaseSpringBootTest {
 
     @Test
     void testDeleteUserWithAssignedTasks() throws Exception {
-        TaskStatus status = new TaskStatus();
-        status.setName("Draft");
-        status.setSlug("draft");
-        status = taskStatusRepository.save(status);
+        TaskStatus status = taskStatusRepository.findBySlug("draft").orElseThrow();
 
         Task task = new Task();
         task.setName("Task");

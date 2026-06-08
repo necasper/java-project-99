@@ -27,6 +27,16 @@ public class UserMapper {
         return user;
     }
 
+    public User map(UserDto dto) {
+        User user = new User();
+        user.setId(dto.getId());
+        user.setFirstName(dto.getFirstName());
+        user.setLastName(dto.getLastName());
+        user.setEmail(dto.getEmail());
+        user.setCreatedAt(dto.getCreatedAt());
+        return user;
+    }
+
     public void applyPartialUpdate(UserUpdateDto dto, User user) {
         if (dto.getFirstName() != null) {
             user.setFirstName(dto.getFirstName());
