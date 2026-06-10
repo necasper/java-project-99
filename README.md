@@ -64,13 +64,6 @@ http://localhost:8080
 
 Пароль можно переопределить через переменную окружения `ADMIN_PASSWORD` (в `.env` или в системе).
 
-### Тесты и проверка стиля
-
-```bash
-./gradlew test
-./gradlew checkstyleMain checkstyleTest
-```
-
 ## API
 
 Аутентификация выполняется через `POST /api/login`. В ответ приходит JWT-токен, который нужно передавать в заголовке `Authorization: Bearer <token>` для защищённых эндпоинтов.

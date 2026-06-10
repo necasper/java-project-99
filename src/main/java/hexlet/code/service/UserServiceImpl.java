@@ -61,7 +61,6 @@ public class UserServiceImpl implements UserService {
         if (dto.getPassword() != null) {
             user.setPassword(passwordEncoder.encode(dto.getPassword()));
         }
-
         User saved = userRepository.save(user);
         return userMapper.toDto(saved);
     }
