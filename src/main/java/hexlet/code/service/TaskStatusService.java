@@ -44,12 +44,6 @@ public class TaskStatusService {
     }
 
     public TaskStatusDto create(TaskStatusCreateDto dto) {
-        if (taskStatusRepository.existsByName(dto.getName())) {
-            throw new BadRequestException("Name already exists");
-        }
-        if (taskStatusRepository.existsBySlug(dto.getSlug())) {
-            throw new BadRequestException("Slug already exists");
-        }
         TaskStatus taskStatus = taskStatusMapper.toEntity(dto);
         TaskStatus saved = taskStatusRepository.save(taskStatus);
         return taskStatusMapper.toDto(saved);
@@ -58,15 +52,6 @@ public class TaskStatusService {
     public TaskStatusDto update(Long id, TaskStatusUpdateDto dto) {
         TaskStatus taskStatus = taskStatusRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Task status with id " + id + " not found"));
-
-        if (dto.getName() != null && !dto.getName().equals(taskStatus.getName())
-                && taskStatusRepository.existsByName(dto.getName())) {
-            throw new BadRequestException("Name already exists");
-        }
-        if (dto.getSlug() != null && !dto.getSlug().equals(taskStatus.getSlug())
-                && taskStatusRepository.existsBySlug(dto.getSlug())) {
-            throw new BadRequestException("Slug already exists");
-        }
 
         taskStatusMapper.applyPartialUpdate(dto, taskStatus);
         TaskStatus saved = taskStatusRepository.save(taskStatus);

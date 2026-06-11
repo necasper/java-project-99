@@ -1,3 +1,5 @@
+import org.gradle.testing.jacoco.tasks.JacocoReport
+
 plugins {
 	java
 	jacoco
@@ -46,11 +48,11 @@ dependencyLocking {
 
 tasks.withType<Test> {
 	useJUnitPlatform()
-	finalizedBy(tasks.jacocoTestReport)
+	finalizedBy(tasks.named("jacocoTestReport"))
 }
 
-tasks.jacocoTestReport {
-	dependsOn(tasks.test)
+tasks.named<JacocoReport>("jacocoTestReport") {
+	dependsOn(tasks.named("test"))
 	reports {
 		xml.required.set(true)
 		html.required.set(true)
@@ -58,7 +60,7 @@ tasks.jacocoTestReport {
 }
 
 tasks.named("sonar") {
-	dependsOn(tasks.jacocoTestReport)
+	dependsOn(tasks.named("jacocoTestReport"))
 }
 
 tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
