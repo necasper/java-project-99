@@ -23,8 +23,14 @@ import java.util.stream.Collectors;
 @Slf4j
 public class GlobalExceptionHandler {
 
-    private static final Pattern CONSTRAINT_PATTERN = Pattern.compile("constraint \\[(.+?)]", Pattern.CASE_INSENSITIVE);
-    private static final Pattern QUOTED_CONSTRAINT_PATTERN = Pattern.compile("constraint \"(.+?)\"", Pattern.CASE_INSENSITIVE);
+    private static final Pattern CONSTRAINT_PATTERN = Pattern.compile(
+            "constraint \\[(.+?)]",
+            Pattern.CASE_INSENSITIVE
+    );
+    private static final Pattern QUOTED_CONSTRAINT_PATTERN = Pattern.compile(
+            "constraint \"(.+?)\"",
+            Pattern.CASE_INSENSITIVE
+    );
 
     @ExceptionHandler(AuthenticationException.class)
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
