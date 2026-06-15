@@ -23,6 +23,14 @@ public class LabelMapper {
         return label;
     }
 
+    public Label map(LabelDto dto) {
+        Label label = new Label();
+        label.setId(dto.getId());
+        label.setName(dto.getName());
+        label.setCreatedAt(dto.getCreatedAt());
+        return label;
+    }
+
     public void applyPartialUpdate(LabelUpdateDto dto, Label label) {
         if (dto.getName() != null) {
             label.setName(dto.getName());

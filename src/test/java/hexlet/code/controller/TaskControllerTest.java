@@ -1,9 +1,13 @@
 package hexlet.code.controller;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import hexlet.code.AppApplication;
 import hexlet.code.dto.AuthRequest;
 import hexlet.code.dto.TaskCreateDto;
+import hexlet.code.dto.TaskDto;
+import hexlet.code.mapper.TaskMapper;
 import hexlet.code.model.Label;
 import hexlet.code.model.Task;
 import hexlet.code.model.TaskStatus;
@@ -47,7 +51,7 @@ class TaskControllerTest extends BaseSpringBootTest {
     @Autowired
     private WebApplicationContext webApplicationContext;
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     @Autowired
     private UserRepository userRepository;
@@ -63,6 +67,9 @@ class TaskControllerTest extends BaseSpringBootTest {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private TaskMapper taskMapper;
 
     private User testUser;
 
@@ -126,16 +133,19 @@ class TaskControllerTest extends BaseSpringBootTest {
 
     @Test
     void testGetAllTasks() throws Exception {
-        mockMvc.perform(get("/api/tasks")
+        var response = mockMvc.perform(get("/api/tasks")
                         .header("Authorization", "Bearer " + authToken))
                 .andExpect(status().isOk())
                 .andExpect(header().string("X-Total-Count", "1"))
-                .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].title").value("Task 1"))
-                .andExpect(jsonPath("$[0].content").value("Description of task 1"))
-                .andExpect(jsonPath("$[0].status").value("draft"))
-                .andExpect(jsonPath("$[0].assignee_id").value(testUser.getId().intValue()))
-                .andExpect(jsonPath("$[0].index").value(3140));
+                .andReturn()
+                .getResponse();
+        var body = response.getContentAsString();
+
+        List<TaskDto> taskDtos = objectMapper.readValue(body, new TypeReference<>() { });
+        var actual = taskDtos.stream().map(taskMapper::map).toList();
+        var expected = taskRepository.findAll();
+
+        assertThat(actual).containsExactlyInAnyOrderElementsOf(expected);
     }
 
     @Test

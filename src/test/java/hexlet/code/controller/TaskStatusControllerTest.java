@@ -1,9 +1,13 @@
 package hexlet.code.controller;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import hexlet.code.AppApplication;
 import hexlet.code.dto.AuthRequest;
 import hexlet.code.dto.TaskStatusCreateDto;
+import hexlet.code.dto.TaskStatusDto;
+import hexlet.code.mapper.TaskStatusMapper;
 import hexlet.code.model.Task;
 import hexlet.code.model.TaskStatus;
 import hexlet.code.model.User;
@@ -23,10 +27,10 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -43,7 +47,7 @@ class TaskStatusControllerTest extends BaseSpringBootTest {
     @Autowired
     private WebApplicationContext webApplicationContext;
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     @Autowired
     private UserRepository userRepository;
@@ -59,6 +63,9 @@ class TaskStatusControllerTest extends BaseSpringBootTest {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private TaskStatusMapper taskStatusMapper;
 
     private TaskStatus testStatus;
 
@@ -110,12 +117,18 @@ class TaskStatusControllerTest extends BaseSpringBootTest {
 
     @Test
     void testGetAllTaskStatuses() throws Exception {
-        mockMvc.perform(get("/api/task_statuses")
+        var response = mockMvc.perform(get("/api/task_statuses")
                         .header("Authorization", "Bearer " + authToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].name").value("Draft"))
-                .andExpect(jsonPath("$[0].slug").value("draft"));
+                .andReturn()
+                .getResponse();
+        var body = response.getContentAsString();
+
+        List<TaskStatusDto> taskStatusDtos = objectMapper.readValue(body, new TypeReference<>() { });
+        var actual = taskStatusDtos.stream().map(taskStatusMapper::map).toList();
+        var expected = taskStatusRepository.findAll();
+
+        assertThat(actual).containsExactlyInAnyOrderElementsOf(expected);
     }
 
     @Test

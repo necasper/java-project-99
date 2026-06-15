@@ -63,4 +63,14 @@ public class TaskMapper {
             task.setAssignee(assignee);
         }
     }
+
+    public Task map(TaskDto dto) {
+        Task task = new Task();
+        task.setId(dto.getId());
+        task.setName(dto.getTitle());
+        task.setIndex(dto.getIndex());
+        task.setDescription(dto.getContent());
+        task.setCreatedAt(dto.getCreatedAt());
+        return task;
+    }
 }

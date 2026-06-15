@@ -6,18 +6,16 @@ import hexlet.code.model.User;
 import hexlet.code.repository.LabelRepository;
 import hexlet.code.repository.TaskStatusRepository;
 import hexlet.code.repository.UserRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import lombok.extern.slf4j.Slf4j;
 
 @Component
+@Slf4j
 public class DataInitializer implements ApplicationRunner {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(DataInitializer.class);
 
     @Value("${app.admin.email:${ADMIN_EMAIL:hexlet@example.com}}")
     private String adminEmail;
@@ -50,7 +48,7 @@ public class DataInitializer implements ApplicationRunner {
 
     private void initAdmin() {
         if (adminPassword == null || adminPassword.isBlank()) {
-            LOGGER.warn("Admin user initialization skipped: ADMIN_PASSWORD is not configured");
+            log.warn("Admin user initialization skipped: ADMIN_PASSWORD is not configured");
             return;
         }
 

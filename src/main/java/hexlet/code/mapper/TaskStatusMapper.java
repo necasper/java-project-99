@@ -25,6 +25,15 @@ public class TaskStatusMapper {
         return taskStatus;
     }
 
+    public TaskStatus map(TaskStatusDto dto) {
+        TaskStatus taskStatus = new TaskStatus();
+        taskStatus.setId(dto.getId());
+        taskStatus.setName(dto.getName());
+        taskStatus.setSlug(dto.getSlug());
+        taskStatus.setCreatedAt(dto.getCreatedAt());
+        return taskStatus;
+    }
+
     public void applyPartialUpdate(TaskStatusUpdateDto dto, TaskStatus taskStatus) {
         if (dto.getName() != null) {
             taskStatus.setName(dto.getName());

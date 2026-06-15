@@ -1,9 +1,13 @@
 package hexlet.code.controller;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import hexlet.code.AppApplication;
 import hexlet.code.dto.AuthRequest;
 import hexlet.code.dto.LabelCreateDto;
+import hexlet.code.dto.LabelDto;
+import hexlet.code.mapper.LabelMapper;
 import hexlet.code.model.Label;
 import hexlet.code.model.Task;
 import hexlet.code.model.TaskStatus;
@@ -24,11 +28,11 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -45,7 +49,7 @@ class LabelControllerTest extends BaseSpringBootTest {
     @Autowired
     private WebApplicationContext webApplicationContext;
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     @Autowired
     private UserRepository userRepository;
@@ -61,6 +65,9 @@ class LabelControllerTest extends BaseSpringBootTest {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private LabelMapper labelMapper;
 
     private Label testLabel;
 
@@ -111,11 +118,18 @@ class LabelControllerTest extends BaseSpringBootTest {
 
     @Test
     void testGetAllLabels() throws Exception {
-        mockMvc.perform(get("/api/labels")
+        var response = mockMvc.perform(get("/api/labels")
                         .header("Authorization", "Bearer " + authToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].name").value("bug"));
+                .andReturn()
+                .getResponse();
+        var body = response.getContentAsString();
+
+        List<LabelDto> labelDtos = objectMapper.readValue(body, new TypeReference<>() { });
+        var actual = labelDtos.stream().map(labelMapper::map).toList();
+        var expected = labelRepository.findAll();
+
+        assertThat(actual).containsExactlyInAnyOrderElementsOf(expected);
     }
 
     @Test
