@@ -86,9 +86,7 @@ public class GlobalExceptionHandler {
     }
 
     private String extractConstraintName(DataIntegrityViolationException ex) {
-        String message = ex.getMostSpecificCause() != null
-                ? ex.getMostSpecificCause().getMessage()
-                : ex.getMessage();
+        String message = ex.getMostSpecificCause().getMessage();
         if (message == null) {
             return null;
         }
