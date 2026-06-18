@@ -16,6 +16,7 @@ import hexlet.code.repository.TaskRepository;
 import hexlet.code.repository.TaskStatusRepository;
 import hexlet.code.repository.UserRepository;
 import hexlet.code.spec.TaskSpecifications;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +24,7 @@ import java.util.List;
 
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class TaskServiceImpl implements TaskService {
 
     private final TaskRepository taskRepository;
@@ -30,19 +32,6 @@ public class TaskServiceImpl implements TaskService {
     private final UserRepository userRepository;
     private final LabelRepository labelRepository;
     private final TaskMapper taskMapper;
-
-    public TaskServiceImpl(
-            TaskRepository taskRepository,
-            TaskStatusRepository taskStatusRepository,
-            UserRepository userRepository,
-            LabelRepository labelRepository,
-            TaskMapper taskMapper) {
-        this.taskRepository = taskRepository;
-        this.taskStatusRepository = taskStatusRepository;
-        this.userRepository = userRepository;
-        this.labelRepository = labelRepository;
-        this.taskMapper = taskMapper;
-    }
 
     @Override
     public List<TaskDto> findAll(TaskFilterParams filter) {
